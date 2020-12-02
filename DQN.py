@@ -2,8 +2,10 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-img = cv2.imread('test.jpg')
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+img = cv2.imread('test1.jpg')
+
+
+# img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 # cv2.imshow('',img)
 # 0.07222222222222222
 # 0.13518518518518519
@@ -12,12 +14,6 @@ img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
 # cv2.waitKey(0)
-H__, W__ = np.where(img == 255)
-H, W = img.shape[:2]
-print(np.min(H__) / H)
-print(np.max(H__) / H)
-print(np.min(W__) / W)
-print(np.max(W__) / W)
 
 
 # print(H__/H)
@@ -39,7 +35,7 @@ print(np.max(W__) / W)
 # plt.show()
 
 
-def get_boos_health(img):
+def get_boss_health(img):
     H, W = img.shape[:2]
     # h_min = int(H * 0.833)
     # h_max = int(H * 0.845)
@@ -52,24 +48,29 @@ def get_boos_health(img):
     plt.show()
     # health = np.sum(health > 80) / health.shape[0]
     return health
+
 
 def get_player_health(img):
     H, W = img.shape[:2]
     # h_min = int(H * 0.833)
     # h_max = int(H * 0.845)
-    w_min = int(W * 0.2908)
-    w_max = int(W * 0.812)
+    w_min = int(W * 0.1022)
+    w_max = int(W * 0.352)
     # rate = 0.9
-    health = img[int(H * 0.8342), w_min:w_max, 2]
-    # health = img[int(h_min * rate + h_max * (1 - rate)), w_min:w_max, 2]  # 最后一个通道为R通道。血条是红色的
-    plt.plot(health)
-    plt.show()
-    # health = np.sum(health > 80) / health.shape[0]
+    # health = img[int(H *0.15), w_min:w_max, 2]
+    # img = img[int(H*0.07):int(H*0.085),w_min:w_max,:]
+    # cv2.imshow('ds',img)
+    # cv2.waitKey(0)
+    # for i in range(10):
+    #     print(i*0.001+0.07)
+    health = img[int(H * (0.0725)), w_min:w_max, 2]  # 最后一个通道为R通道。血条是红色的
+        # plt.plot(health)
+        # plt.show()
+        # input()
+    health = np.sum(health > 120) / health.shape[0]
     return health
 
 
-
-
-print(get_boos_health(img))
-#
+# print(get_boos_health(img))
+print(get_player_health(img))
 # get_boos_health(img)
