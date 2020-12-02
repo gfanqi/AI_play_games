@@ -1,59 +1,21 @@
-import time
-from pprint import pprint
-
-import win32gui, win32ui, win32con, win32api
-import numpy as np
-
-def window_capture(filename):
-    hwnd = 0  # 窗口的编号，0号表示当前活跃窗口
-    # 根据窗口句柄获取窗口的设备上下文DC（Divice Context）
-    hwndDC = win32gui.GetWindowDC(hwnd)
-    print(hwndDC)
-    # 根据窗口的DC获取mfcDC
-    mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-    # mfcDC创建可兼容的DC
-    saveDC = mfcDC.CreateCompatibleDC()
-    # 创建bigmap准备保存图片
-    saveBitMap = win32ui.CreateBitmap()
-    # 获取监控器信息
-    MoniterDev = win32api.EnumDisplayMonitors(None, None)
-    w = MoniterDev[0][2][2]
-    h = MoniterDev[0][2][3]
-    # print w,h　　　#图片大小
-    # 为bitmap开辟空间
-    saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
-    # 高度saveDC，将截图保存到saveBitmap中
-    saveDC.SelectObject(saveBitMap)
-    # 截取从左上角（0，0）长宽为（w，h）的图片
-    saveDC.BitBlt((0, 0), (w, h), mfcDC, (0, 0), win32con.SRCCOPY)
-    # print(saveDC)
-    # saveBitMap.SaveBitmapFile(saveDC, filename)
-
-
-# beg = time.time()
-# for i in range(10):
-#     window_capture("haha.jpg")
-# end = time.time()
-# print(end - beg)
-
-from PyQt5.QtWidgets import QApplication
-# from PyQt5.QtGui import *
-import win32gui
 import sys
-#
-hwnd = win32gui.FindWindow(None, 'AI_play_games – tools.py')
-print(hwnd)
-app = QApplication(sys.argv)
-screen = QApplication.primaryScreen()
-img = screen.grabWindow(hwnd).toImage()
-# print(img.text())
-#
-# # print(np.array(img))
-# # print(np.array(img))
-#
-# # print(type(img))
-# a = img.save("screenshot.jpg")
-# print(a)
+
+import numpy as np
+import win32gui
+from PyQt5.QtWidgets import QApplication
+
+
+def windows_capture(name=None):
+    hwnd = win32gui.FindWindow(None, name)
+    a=QApplication(sys.argv)
+    screen = QApplication.primaryScreen()
+    img = screen.grabWindow(hwnd).toImage()
+    size = img.size()
+    s = img.bits().asstring(size.width() * size.height() * img.depth() // 8)  # format 0xffRRGGBB
+    arr = np.fromstring(s, dtype=np.uint8).reshape((size.height(), size.width(), img.depth() // 8))
+    return arr
+
+
 def get_hwnd_title():
     hwnd_title = {}
     def get_all_hwnd(hwnd, mouse):
@@ -64,5 +26,30 @@ def get_hwnd_title():
     win32gui.EnumWindows(get_all_hwnd, 0)
     return hwnd_title
 
+
 if __name__ == '__main__':
-    pprint(get_hwnd_title())
+    # pprint(get_hwnd_title())
+    # print(dir(windows_capture()))
+    import time
+    t1 = time.time()
+    for i in range(50):
+        # image = windows_capture()
+        arr = windows_capture('0')
+
+        # cv2.imshow('fdsf',arr)
+        # cv2.waitKey(0)
+    print((time.time()-t1)/50)
+    # # print(arr.shape)
+    # # arr = cv2.cvtColor(arr,cv2.COLOR_BGRA2BGR)
+    # # arr = arr[..., :-1]
+    # print(arr.shape)
+    # cv2.imshow('fds', arr)
+    # cv2.waitKey()
+    # # new_image = Image.fromarray(array)
+    #
+    # # for attr in dir(img):
+    # #     try:
+    # #         print(attr,img.__getattribute__(attr))
+    # #         # img.__getattribute__(attr)
+    # #     except:
+    # #         pass
