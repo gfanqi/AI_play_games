@@ -1,4 +1,6 @@
 import time
+from pprint import pprint
+
 import win32gui, win32ui, win32con, win32api
 import numpy as np
 
@@ -35,37 +37,32 @@ def window_capture(filename):
 # print(end - beg)
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import *
+# from PyQt5.QtGui import *
 import win32gui
 import sys
-
+#
 hwnd = win32gui.FindWindow(None, 'AI_play_games – tools.py')
 print(hwnd)
 app = QApplication(sys.argv)
 screen = QApplication.primaryScreen()
 img = screen.grabWindow(hwnd).toImage()
 # print(img.text())
+#
+# # print(np.array(img))
+# # print(np.array(img))
+#
+# # print(type(img))
+# a = img.save("screenshot.jpg")
+# print(a)
+def get_hwnd_title():
+    hwnd_title = {}
+    def get_all_hwnd(hwnd, mouse):
+        if win32gui.IsWindow(hwnd) and win32gui.IsWindowEnabled(hwnd) and win32gui.IsWindowVisible(hwnd):
+            hwnd_title.update({
+                hwnd: win32gui.GetWindowText(hwnd)
+            })
+    win32gui.EnumWindows(get_all_hwnd, 0)
+    return hwnd_title
 
-print(np.array(img))
-# print(np.array(img))
-
-# print(type(img))
-a = img.save("screenshot.jpg")
-print(a)
-# hwnd_title = {}
-#
-#
-# def get_all_hwnd(hwnd, mouse):
-#     if win32gui.IsWindow(hwnd) and win32gui.IsWindowEnabled(hwnd) and win32gui.IsWindowVisible(hwnd):
-#         hwnd_title.update({
-#             hwnd: win32gui.GetWindowText(hwnd)
-#         })
-#
-#
-# win32gui.EnumWindows(get_all_hwnd, 0)
-# for h, t in hwnd_title.items():
-#     if t != '':
-#         print(h, t)
-#         pass
-#     # else:
-#         # print(t)
+if __name__ == '__main__':
+    pprint(get_hwnd_title())
