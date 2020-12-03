@@ -2,35 +2,29 @@
 from __future__ import print_function
 
 import argparse
-import skimage as skimage
-from skimage import transform, color, exposure
-from skimage.transform import rotate
-from skimage.viewer import ImageViewer
-import sys
-
-sys.path.append("game/")
-import wrapped_flappy_bird as game
+import json
+# import wrapped_flappy_bird as game
 import random
-import numpy as np
 from collections import deque
 
-import json
-from keras.initializers import normal, identity
-from keras.models import model_from_json
-from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.optimizers import SGD, Adam
-import tensorflow as tf
+import numpy as np
+import skimage as skimage
+from skimage import transform, color, exposure
+from tensorflow.keras.layers import Convolution2D
+from tensorflow.keras.layers import Dense, Activation, Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+
+
 
 GAME = 'bird'  # the name of the game being played for log files
 CONFIG = 'nothreshold'
-ACTIONS = 2  # number of valid actions
+ACTIONS = 8  # number of valid actions
 GAMMA = 0.99  # decay rate of past observations
-OBSERVATION = 3200.  # timesteps to observe before training
+OBSERVATION = 200  # timesteps to observe before training
 EXPLORE = 3000000.  # frames over which to anneal epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
-INITIAL_EPSILON = 0.1  # starting value of epsilon
+INITIAL_EPSILON = 0.05 # starting value of epsilon
 REPLAY_MEMORY = 50000  # number of previous transitions to remember
 BATCH = 32  # size of minibatch
 FRAME_PER_ACTION = 1
@@ -39,17 +33,20 @@ LEARNING_RATE = 1e-4
 img_rows, img_cols = 80, 80
 # Convert image into Black and white
 img_channels = 4  # We stack 4 frames
-
+# info = "\r {prifix} TIMESTEP {t}/ STATE {state}/ EPSILON {epsilon}/ ACTION {action_index}/ REWARD {r_t}/ Q_MAX {Q_sa}/ LOSS {loss}/"
+# print('\r' + prifix + "TIMESTEP", t, "/ STATE", state,
+#       "/ EPSILON", epsilon, "/ ACTION", action_index, "/ REWARD", r_t,
+#       "/ Q_MAX ", np.max(Q_sa), "/ Loss ", loss, end='')
 
 def buildmodel():
     print("Now we build the model")
     model = Sequential()
-    model.add(Convolution2D(32, 8, 8, subsample=(4, 4), border_mode='same',
+    model.add(Convolution2D(32, kernel_size=(8, 8,), strides=(4, 4), padding='same',
                             input_shape=(img_rows, img_cols, img_channels)))  # 80*80*4
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 4, 4, subsample=(2, 2), border_mode='same'))
+    model.add(Convolution2D(64, kernel_size=(4, 4), strides=(2, 2), padding='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same'))
+    model.add(Convolution2D(64, kernel_size=(3, 3), strides=(1, 1), padding='same'))
     model.add(Activation('relu'))
     model.add(Flatten())
     model.add(Dense(512))
@@ -64,7 +61,7 @@ def buildmodel():
 
 def trainNetwork(model, args):
     # open up a game state to communicate with emulator
-    game_state = game.GameState()
+
 
     # store the previous observations in replay memory
     D = deque()
@@ -83,14 +80,14 @@ def trainNetwork(model, args):
     s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
     # print (s_t.shape)
 
-    # In Keras, need to reshape
+    # In tensorflow.keras, need to reshape
     s_t = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])  # 1*80*80*4
 
     if args['mode'] == 'Run':
         OBSERVE = 999999999  # We keep observe, never train
         epsilon = FINAL_EPSILON
         print("Now we load weight")
-        model.load_weights("model.h5")
+        model.load_weights("trained_model/model.h5", by_name=True)
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse', optimizer=adam)
         print("Weight load successfully")
@@ -98,6 +95,7 @@ def trainNetwork(model, args):
         OBSERVE = OBSERVATION
         epsilon = INITIAL_EPSILON
 
+        model.load_weights("model.h5")
     t = 0
     while True:
         loss = 0
@@ -105,13 +103,15 @@ def trainNetwork(model, args):
         action_index = 0
         r_t = 0
         a_t = np.zeros([ACTIONS])
+        prifix = ''
         # choose an action epsilon greedy
         if t % FRAME_PER_ACTION == 0:
             if random.random() <= epsilon:
-                print("----------Random Action----------")
+                prifix = "------Random Action-------"
                 action_index = random.randrange(ACTIONS)
                 a_t[action_index] = 1
             else:
+                prifix = "-----model prediction-----"
                 q = model.predict(s_t)  # input a stack of 4 images, get the prediction
                 max_Q = np.argmax(q)
                 action_index = max_Q
@@ -149,8 +149,12 @@ def trainNetwork(model, args):
             state_t1 = np.concatenate(state_t1)
             targets = model.predict(state_t)
             Q_sa = model.predict(state_t1)
+            print(targets)
+            print(targets[range(BATCH), action_t])
+            print(action_t)
             targets[range(BATCH), action_t] = reward_t + GAMMA * np.max(Q_sa, axis=1) * np.invert(terminal)
-
+            # print(targets)
+            input()
             loss += model.train_on_batch(state_t, targets)
 
         s_t = s_t1
@@ -158,7 +162,7 @@ def trainNetwork(model, args):
 
         # save progress every 10000 iterations
         if t % 1000 == 0:
-            print("Now we save model")
+            print("\nNow we save model")
             model.save_weights("model.h5", overwrite=True)
             with open("model.json", "w") as outfile:
                 json.dump(model.to_json(), outfile)
@@ -172,12 +176,8 @@ def trainNetwork(model, args):
         else:
             state = "train"
 
-        print("TIMESTEP", t, "/ STATE", state,
-              "/ EPSILON", epsilon, "/ ACTION", action_index, "/ REWARD", r_t,
-              "/ Q_MAX ", np.max(Q_sa), "/ Loss ", loss)
-
-    # print("Episode finished!")
-    # print("************************")
+        print(f"\r {prifix} TIMESTEP {t}/ STATE {state}/ EPSILON {epsilon}/"
+              f" ACTION {action_index}/ REWARD {r_t}/ Q_MAX {np.max(Q_sa)}/ LOSS {loss}/",end='')
 
 
 def playGame(args):
@@ -185,12 +185,10 @@ def playGame(args):
     trainNetwork(model, args)
 
 
-# def main():
-#     parser = argparse.ArgumentParser(description='Description of your program')
-#     parser.add_argument('-m', '--mode', help='Train / Run', required=True)
-#     args = vars(parser.parse_args())
-#     playGame(args)
+def main():
+    args = {'mode': 'Train'}
+    playGame(args)
 
 
 if __name__ == "__main__":
-    pass
+    main()

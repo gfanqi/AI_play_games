@@ -1,4 +1,6 @@
+import shutil
 import sys
+from pprint import pprint
 
 import numpy as np
 import win32gui
@@ -7,7 +9,7 @@ from PyQt5.QtWidgets import QApplication
 
 def windows_capture(name=None):
     hwnd = win32gui.FindWindow(None, name)
-    a=QApplication(sys.argv)
+    a = QApplication(sys.argv)
     screen = QApplication.primaryScreen()
     img = screen.grabWindow(hwnd).toImage()
     size = img.size()
@@ -18,38 +20,36 @@ def windows_capture(name=None):
 
 def get_hwnd_title():
     hwnd_title = {}
+
     def get_all_hwnd(hwnd, mouse):
         if win32gui.IsWindow(hwnd) and win32gui.IsWindowEnabled(hwnd) and win32gui.IsWindowVisible(hwnd):
             hwnd_title.update({
                 hwnd: win32gui.GetWindowText(hwnd)
             })
+
     win32gui.EnumWindows(get_all_hwnd, 0)
     return hwnd_title
 
 
 if __name__ == '__main__':
-    # pprint(get_hwnd_title())
-    # print(dir(windows_capture()))
+    import cv2
     import time
-    t1 = time.time()
-    for i in range(50):
-        # image = windows_capture()
-        arr = windows_capture('0')
+    import os
 
-        # cv2.imshow('fdsf',arr)
-        # cv2.waitKey(0)
-    print((time.time()-t1)/50)
-    # # print(arr.shape)
-    # # arr = cv2.cvtColor(arr,cv2.COLOR_BGRA2BGR)
-    # # arr = arr[..., :-1]
-    # print(arr.shape)
-    # cv2.imshow('fds', arr)
-    # cv2.waitKey()
-    # # new_image = Image.fromarray(array)
-    #
-    # # for attr in dir(img):
-    # #     try:
-    # #         print(attr,img.__getattribute__(attr))
-    # #         # img.__getattribute__(attr)
-    # #     except:
-    # #         pass
+    if os.path.exists('../dark_souls'):shutil.rmtree('../dark_souls')
+    os.mkdir('../dark_souls')
+    # while True:
+    FPS = 20
+    SecPerFPS = 1 / FPS
+    t1= t0 = time.time()
+    i = 0
+    while True:
+        if time.time() - t1 > SecPerFPS*0.995:
+            t1 = time.time()
+            img = windows_capture('DARK SOULS III')
+            # img = cv2.cvtColor(img,cv2.COLOR_BGRA2BGR)
+            # print(img.shape)
+            cv2.imwrite('dark_souls/{}.jpg'.format(i),img[...,:3])
+            i += 1
+        # if i == 120: break
+    # print(time.time() - t0)
