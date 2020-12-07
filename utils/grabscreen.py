@@ -20,16 +20,13 @@ def windows_capture(name=None):
 
 def get_hwnd_title():
     hwnd_title = {}
-
     def get_all_hwnd(hwnd, mouse):
         if win32gui.IsWindow(hwnd) and win32gui.IsWindowEnabled(hwnd) and win32gui.IsWindowVisible(hwnd):
             hwnd_title.update({
                 hwnd: win32gui.GetWindowText(hwnd)
             })
-
     win32gui.EnumWindows(get_all_hwnd, 0)
     return hwnd_title
-
 
 if __name__ == '__main__':
     import cv2
@@ -47,9 +44,5 @@ if __name__ == '__main__':
         if time.time() - t1 > SecPerFPS*0.995:
             t1 = time.time()
             img = windows_capture('DARK SOULS III')
-            # img = cv2.cvtColor(img,cv2.COLOR_BGRA2BGR)
-            # print(img.shape)
             cv2.imwrite('dark_souls/{}.jpg'.format(i),img[...,:3])
             i += 1
-        # if i == 120: break
-    # print(time.time() - t0)
